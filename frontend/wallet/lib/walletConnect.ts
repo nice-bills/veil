@@ -2,6 +2,7 @@
 
 import { Core } from '@walletconnect/core'
 import { Web3Wallet } from '@walletconnect/web3wallet'
+import type { IWeb3Wallet } from '@walletconnect/web3wallet'
 import { getSdkError } from '@walletconnect/utils'
 import {
   Keypair,
@@ -41,7 +42,7 @@ export type WalletConnectProposal = {
 type SessionListener = (sessions: WalletConnectSession[]) => void
 type ProposalListener = (proposal: WalletConnectProposal | null) => void
 
-let _client: Web3Wallet | null = null
+let _client: IWeb3Wallet | null = null
 let _sessions: WalletConnectSession[] = []
 let _pendingProposal: WalletConnectProposal | null = null
 
@@ -92,7 +93,7 @@ function notifyProposal(): void {
   for (const listener of proposalListeners) listener(_pendingProposal)
 }
 
-async function syncSessionsFromClient(client: Web3Wallet): Promise<void> {
+async function syncSessionsFromClient(client: IWeb3Wallet): Promise<void> {
   const active = client.getActiveSessions()
   _sessions = Object.values(active).map(parseSession)
   persistSessions(_sessions)
@@ -353,7 +354,7 @@ export function getPendingWalletConnectProposal(): WalletConnectProposal | null 
   return _pendingProposal
 }
 
-export async function getWalletConnectClient(): Promise<Web3Wallet> {
+export async function getWalletConnectClient(): Promise<IWeb3Wallet> {
   if (_client) return _client
 
   if (typeof window === 'undefined') {

@@ -19,7 +19,8 @@
       "@veil/sdk": ["../../sdk/src/useInvisibleWallet"],
       "@veil/utils": ["../../sdk/src/utils"],
       "react": ["./node_modules/@types/react"],
-      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"]
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
+      "@stellar/stellar-sdk": ["./node_modules/@stellar/stellar-sdk"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.d.ts", ".next/types/**/*.ts"],

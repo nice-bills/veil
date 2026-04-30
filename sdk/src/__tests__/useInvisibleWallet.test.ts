@@ -336,28 +336,24 @@ describe('useInvisibleWallet', () => {
       expect(sig!.signature).toBeInstanceOf(Uint8Array)
     })
 
-    it('returns null and sets an error when the payload is not 32 bytes', async () => {
+    it('throws when the payload is not 32 bytes', async () => {
       const { result } = renderHook(() => useInvisibleWallet(CONFIG))
       const badPayload = new Uint8Array(16)
 
-      let sig!: Awaited<ReturnType<typeof result.current.signAuthEntry>>
-      await act(async () => { sig = await result.current.signAuthEntry(badPayload) })
-
-      expect(sig).toBeNull()
-      expect(result.current.error).toContain('32 bytes')
+      await expect(
+        act(async () => { await result.current.signAuthEntry(badPayload) })
+      ).rejects.toThrow('32 bytes')
     })
 
-    it('returns null and sets an error when no key ID is stored (not yet registered)', async () => {
+    it('throws when no key ID is stored (not yet registered)', async () => {
       localStorage.removeItem('invisible_wallet_key_id')
 
       const { result } = renderHook(() => useInvisibleWallet(CONFIG))
       const payload = new Uint8Array(32).fill(1)
 
-      let sig!: Awaited<ReturnType<typeof result.current.signAuthEntry>>
-      await act(async () => { sig = await result.current.signAuthEntry(payload) })
-
-      expect(sig).toBeNull()
-      expect(result.current.error).toMatch(/No key ID/)
+      await expect(
+        act(async () => { await result.current.signAuthEntry(payload) })
+      ).rejects.toThrow(/No key ID/)
     })
   })
 
