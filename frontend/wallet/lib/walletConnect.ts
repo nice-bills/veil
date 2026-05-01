@@ -1,7 +1,7 @@
 'use client'
 
 import { Core } from '@walletconnect/core'
-import { Web3Wallet } from '@walletconnect/web3wallet'
+import { Web3Wallet, type IWeb3Wallet } from '@walletconnect/web3wallet'
 import { getSdkError } from '@walletconnect/utils'
 import {
   Keypair,
@@ -41,7 +41,7 @@ export type WalletConnectProposal = {
 type SessionListener = (sessions: WalletConnectSession[]) => void
 type ProposalListener = (proposal: WalletConnectProposal | null) => void
 
-let _client: Web3Wallet | null = null
+let _client: IWeb3Wallet | null = null
 let _sessions: WalletConnectSession[] = []
 let _pendingProposal: WalletConnectProposal | null = null
 
@@ -92,7 +92,7 @@ function notifyProposal(): void {
   for (const listener of proposalListeners) listener(_pendingProposal)
 }
 
-async function syncSessionsFromClient(client: Web3Wallet): Promise<void> {
+async function syncSessionsFromClient(client: IWeb3Wallet): Promise<void> {
   const active = client.getActiveSessions()
   _sessions = Object.values(active).map(parseSession)
   persistSessions(_sessions)
@@ -186,7 +186,7 @@ function buildWcError(id: number, code: number, message: string) {
   return { id, jsonrpc: '2.0', error: { code, message } }
 }
 
-export async function handleSignXdrRequest(
+async function signXdrPayload(
   _topic: string,
   _requestId: number,
   xdrString: string,
@@ -197,12 +197,12 @@ export async function handleSignXdrRequest(
   const tx = TransactionBuilder.fromXDR(xdrString, network.networkPassphrase)
 
   const sim = await rpc.simulateTransaction(tx)
-  if (SorobanRpc.Api.isSimulationError(sim)) {
+  if ((SorobanRpc as any).Api.isSimulationError(sim)) {
     throw new Error(`Simulation failed: ${sim.error}`)
   }
 
   const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
-  const successSim = sim as SorobanRpc.Api.SimulateTransactionSuccessResponse
+  const successSim = sim as any
   const authEntries = successSim.result?.auth
 
   if (authEntries) {
@@ -264,7 +264,7 @@ async function handleSignAndSubmitXdrRequest(
   xdrString: string,
 ): Promise<string> {
   const rpc = getRpcServer()
-  const signedXDR = await handleSignXdrRequest(topic, requestId, xdrString)
+  const signedXDR = await signXdrPayload(topic, requestId, xdrString)
   const network = getNetwork()
   const signedTx = TransactionBuilder.fromXDR(signedXDR, network.networkPassphrase)
   const sendResult = await rpc.sendTransaction(signedTx)
@@ -276,9 +276,16 @@ async function handleSignAndSubmitXdrRequest(
   return sendResult.hash
 }
 
-async function handleSessionRequest(event: any): Promise<void> {
+function dispatchWalletConnectRequest(event: any): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('wc:request', { detail: event }),
+  )
+}
+
+export async function handleSignXdrRequest(event: any): Promise<void> {
   const client = _client
-  if (!client) return
+  if (!client) throw new Error('WalletConnect client not initialized.')
 
   const topic = event.topic
   const method = event.params?.request?.method
@@ -288,7 +295,7 @@ async function handleSessionRequest(event: any): Promise<void> {
     if (method === 'stellar_signXDR') {
       const requestParams = event.params?.request?.params
       const xdrString = getRequestXdr(requestParams)
-      const signedXDR = await handleSignXdrRequest(topic, requestId, xdrString)
+      const signedXDR = await signXdrPayload(topic, requestId, xdrString)
       await client.respondSessionRequest({
         topic,
         response: buildWcResult(requestId, { signedXDR }),
@@ -353,7 +360,7 @@ export function getPendingWalletConnectProposal(): WalletConnectProposal | null 
   return _pendingProposal
 }
 
-export async function getWalletConnectClient(): Promise<Web3Wallet> {
+export async function getWalletConnectClient(): Promise<IWeb3Wallet> {
   if (_client) return _client
 
   if (typeof window === 'undefined') {
@@ -390,8 +397,8 @@ export async function getWalletConnectClient(): Promise<Web3Wallet> {
     notifySessions()
   })
 
-  _client.on('session_request', async (event: any) => {
-    await handleSessionRequest(event)
+  _client.on('session_request', (event: any) => {
+    dispatchWalletConnectRequest(event)
   })
 
   await syncSessionsFromClient(_client)

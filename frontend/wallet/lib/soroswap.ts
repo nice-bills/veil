@@ -70,8 +70,8 @@ export async function getSoroswapQuote(params: SwapParams): Promise<SwapQuote | 
     return {
       amountOut: result.amountOut.toString(),
       priceImpact: Number(result.priceImpactPct || '0'),
-      path: routePlan.flatMap((r) => r.swapInfo.path),
-      protocols: [...new Set(routePlan.map((r) => r.swapInfo.protocol))],
+      path: routePlan.flatMap((r: any) => r.swapInfo.path as string[]),
+      protocols: Array.from(new Set(routePlan.map((r: any) => String(r.swapInfo.protocol)))),
       rawQuote: result,
       ttl: Date.now() + 30_000, // 30-second TTL
     }

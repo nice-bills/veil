@@ -225,7 +225,7 @@ async function buildBlendSubmitXdr(params: {
       .build()
 
     const sim = await rpc.simulateTransaction(tx)
-    if (SorobanRpc.Api.isSimulationError(sim)) {
+    if ((SorobanRpc as any).Api.isSimulationError(sim)) {
       throw new Error(`Simulation failed: ${sim.error}`)
     }
 

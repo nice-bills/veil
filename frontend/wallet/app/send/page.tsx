@@ -62,8 +62,8 @@ export default function SendPage() {
       return
     }
     const server = new Server(network.horizonUrl)
-    server.loadAccount(signerPublicKey).then(account => {
-      const list: WalletAsset[] = account.balances.map(b => {
+    server.loadAccount(signerPublicKey).then((account: any) => {
+      const list: WalletAsset[] = account.balances.map((b: any) => {
         if (b.asset_type === 'native') {
           return { code: 'XLM', issuer: null, contractId: getNativeAssetContractId() }
         }
@@ -209,7 +209,7 @@ export default function SendPage() {
           .build()
 
         const sim = await rpcServer.simulateTransaction(tx)
-        if (SorobanRpc.Api.isSimulationError(sim)) {
+        if ((SorobanRpc as any).Api.isSimulationError(sim)) {
           throw new Error(`Simulation failed: ${sim.error}`)
         }
         const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
@@ -221,8 +221,8 @@ export default function SendPage() {
         }
         for (let i = 0; i < 30; i++) {
           const result = await rpcServer.getTransaction(sendResult.hash)
-          if (result.status !== SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
-            if (result.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+          if (result.status !== (SorobanRpc as any).Api.GetTransactionStatus.NOT_FOUND) {
+            if (result.status !== (SorobanRpc as any).Api.GetTransactionStatus.SUCCESS) {
               throw new Error(`Transaction failed: ${result.status}`)
             }
             break

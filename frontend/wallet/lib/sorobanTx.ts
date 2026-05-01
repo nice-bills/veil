@@ -17,7 +17,7 @@ export async function signAndSubmitSorobanXdr(params: {
 
   // Ensure Soroban footprint/resources are assembled before submit.
   const sim = await rpc.simulateTransaction(built)
-  if (SorobanRpc.Api.isSimulationError(sim)) {
+  if ((SorobanRpc as any).Api.isSimulationError(sim)) {
     throw new Error(`Simulation failed: ${sim.error}`)
   }
 
@@ -33,8 +33,8 @@ export async function signAndSubmitSorobanXdr(params: {
 
   for (let i = 0; i < 30; i++) {
     const result = await rpc.getTransaction(sendResult.hash)
-    if (result.status !== SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
-      if (result.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+    if (result.status !== (SorobanRpc as any).Api.GetTransactionStatus.NOT_FOUND) {
+      if (result.status !== (SorobanRpc as any).Api.GetTransactionStatus.SUCCESS) {
         throw new Error(`Transaction failed: ${result.status}`)
       }
       return sendResult.hash

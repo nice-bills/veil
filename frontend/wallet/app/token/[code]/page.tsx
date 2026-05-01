@@ -101,8 +101,8 @@ export default function TokenPage() {
               .addOperation(sacContract.call('balance', nativeToScVal(walletAddress, { type: 'address' })))
               .setTimeout(30).build()
             const sim = await rpcServer.simulateTransaction(balanceTx)
-            if (!SorobanRpc.Api.isSimulationError(sim)) {
-              const result = (sim as SorobanRpc.Api.SimulateTransactionSuccessResponse).result
+            if (!(SorobanRpc as any).Api.isSimulationError(sim)) {
+              const result = (sim as any).result
               if (result) contractXlm = Number(scValToNative(result.retval) as bigint) / 10_000_000
             }
           } catch {}

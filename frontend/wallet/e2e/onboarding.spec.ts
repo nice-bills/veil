@@ -1,3 +1,4 @@
+// @ts-ignore
 import { test, expect, type BrowserContext, type Page } from '@playwright/test'
 
 // ── WebAuthn virtual authenticator helpers ────────────────────────────────────
@@ -22,12 +23,12 @@ async function addVirtualAuthenticator(context: BrowserContext) {
 
 async function stubNetworkCalls(page: Page) {
   // Friendbot — always succeed
-  await page.route('https://friendbot.stellar.org/**', route =>
+  await page.route('https://friendbot.stellar.org/**', (route: any) =>
     route.fulfill({ status: 200, body: JSON.stringify({ result: 'funded' }) }),
   )
 
   // Horizon loadAccount — return a minimal funded account
-  await page.route('https://horizon-testnet.stellar.org/accounts/**', route =>
+  await page.route('https://horizon-testnet.stellar.org/accounts/**', (route: any) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -43,7 +44,7 @@ async function stubNetworkCalls(page: Page) {
   )
 
   // Soroban RPC — return a minimal simulate response with a fake contract address
-  await page.route('https://soroban-testnet.stellar.org', route => {
+  await page.route('https://soroban-testnet.stellar.org', (route: any) => {
     const body = route.request().postDataJSON() as { method?: string }
     if (body?.method === 'simulateTransaction' || body?.method === 'sendTransaction') {
       return route.fulfill({

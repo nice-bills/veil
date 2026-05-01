@@ -48,11 +48,11 @@ export default function RecoverPage() {
         .build()
 
       const sim = await server.simulateTransaction(tx)
-      if (SorobanRpc.Api.isSimulationError(sim)) {
+      if ((SorobanRpc as any).Api.isSimulationError(sim)) {
         throw new Error('Could not read wallet on-chain. Check the address and try again.')
       }
 
-      const simResult  = (sim as SorobanRpc.Api.SimulateTransactionSuccessResponse).result
+      const simResult  = (sim as any).result
       if (!simResult) throw new Error('No result from contract simulation.')
 
       // Parse the XDR ScVal directly — avoids scValToNative runtime differences
