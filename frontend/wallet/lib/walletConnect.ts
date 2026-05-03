@@ -202,7 +202,8 @@ async function signXdrPayload(
     throw new Error(`Simulation failed: ${sim.error}`)
   }
 
-  const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
+  // Sign auth entries BEFORE assembly — assembleTransaction reads sim.result.auth
+  // at call time, so signing after would leave unsigned credentials in the tx.
   const successSim = sim as SorobanRpc.Api.SimulateTransactionSuccessResponse
   const authEntries = successSim.result?.auth
 
@@ -255,6 +256,7 @@ async function signXdrPayload(
     }
   }
 
+  const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
   assembled.sign(feePayerKeypair)
   return assembled.toXDR()
 }

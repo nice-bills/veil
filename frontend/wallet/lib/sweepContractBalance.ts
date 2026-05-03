@@ -71,11 +71,8 @@ export async function sweepContractBalance(
     throw new Error(`Simulation failed: ${sim.error}`)
   }
 
-  const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
-
-  // 4. Sign Soroban auth entries that require the C... contract's WebAuthn passkey.
-  //    Payload = SHA-256(HashIdPreimageSorobanAuthorization XDR) — must match what the
-  //    Soroban host passes to __check_auth.
+  // 4. Sign Soroban auth entries BEFORE assembly so assembleTransaction picks
+  //    up the signed credentials when it reads sim.result.auth.
   const successSim  = sim as SorobanRpc.Api.SimulateTransactionSuccessResponse
   const authEntries = successSim.result?.auth
   if (authEntries) {
@@ -125,7 +122,12 @@ export async function sweepContractBalance(
     }
   }
 
-  // 5. Sign the assembled transaction with the fee-payer keypair (pays fees)
+  // 5. Assemble NOW — sim.result.auth already has signed credentials above.
+  //    assembleTransaction reads from sim at call time; calling it before
+  //    signing would embed unsigned credentials in the transaction.
+  const assembled = SorobanRpc.assembleTransaction(tx, sim).build()
+
+  // 6. Sign the assembled transaction with the fee-payer keypair (pays fees)
   assembled.sign(feePayerKeypair)
 
   // 6. Submit to Soroban RPC and poll for confirmation
