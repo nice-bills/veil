@@ -30,8 +30,29 @@ export async function sha256(data: Uint8Array): Promise<Uint8Array> {
     return new Uint8Array(buf);
 }
 
+// SECP256R1 (P-256) curve order n. Soroban's secp256r1_verify host function
+// rejects signatures where s > n/2 ("non-low-S form") to prevent malleability.
+// WebAuthn authenticators don't always return low-S, so we must normalise.
+const SECP256R1_N =
+    0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551n;
+const SECP256R1_HALF_N = SECP256R1_N >> 1n;
+
+/** If s > n/2, replace with (n - s). Returns 32-byte big-endian. */
+function normalizeLowS(sBytes: Uint8Array): Uint8Array {
+    let s = 0n;
+    for (const b of sBytes) s = (s << 8n) | BigInt(b);
+    if (s > SECP256R1_HALF_N) s = SECP256R1_N - s;
+    const out = new Uint8Array(32);
+    for (let i = 31; i >= 0; i--) {
+        out[i] = Number(s & 0xffn);
+        s >>= 8n;
+    }
+    return out;
+}
+
 /**
- * Convert an ASN.1 DER-encoded P-256 ECDSA signature to raw 64-byte (r ‖ s) format.
+ * Convert an ASN.1 DER-encoded P-256 ECDSA signature to raw 64-byte (r ‖ s) format,
+ * normalising s to low form so Soroban's secp256r1_verify host function accepts it.
  *
  * WebAuthn returns DER; the contract expects raw r ‖ s (32 bytes each).
  *
@@ -57,7 +78,7 @@ export function derToRawSignature(derSig: ArrayBuffer): Uint8Array {
 
     const raw = new Uint8Array(64);
     raw.set(padOrTrim32(rRaw), 0);
-    raw.set(padOrTrim32(sRaw), 32);
+    raw.set(normalizeLowS(padOrTrim32(sRaw)), 32);
     return raw;
 }
 
