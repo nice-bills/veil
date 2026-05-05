@@ -46,13 +46,41 @@ export interface PaymentInput {
 /**
  * Builds a path payment transaction (swap via SDEX best path).
  * Returns unsigned XDR — user must sign with passkey before submission.
+ *
+ * Discovers the best path via Horizon's strictSendPaths endpoint before
+ * building the operation. Without this, an empty `path: []` forces a direct
+ * conversion only — which fails with op_too_few_offers when no direct
+ * orderbook offer between source and dest exists (common on thin testnet
+ * pairs where the only route is via an intermediate asset).
  */
 export async function buildSwap(input: SwapInput): Promise<string> {
   const account = await horizon.loadAccount(input.wallet_address)
   const sendAsset = parseAsset(input.from_asset)
   const destAsset = parseAsset(input.to_asset)
   const sendAmount = input.amount.toFixed(7)
-  const destMin = (input.min_received ?? input.amount * 0.995).toFixed(7)
+
+  // Discover best path. Use the returned destination_amount to compute a
+  // sensible destMin (apply 0.5% slippage default, or honour the caller's
+  // explicit min_received).
+  const pathsResult = await horizon
+    .strictSendPaths(sendAsset, sendAmount, [destAsset])
+    .call()
+
+  if (pathsResult.records.length === 0) {
+    throw new Error(
+      `No swap path from ${input.from_asset} to ${input.to_asset} for amount ${sendAmount}. Try a different amount or asset.`,
+    )
+  }
+
+  const bestPath = pathsResult.records[0]
+  const intermediatePath = bestPath.path.map((p: any) =>
+    p.asset_type === 'native' || !p.asset_code
+      ? Asset.native()
+      : new Asset(p.asset_code, p.asset_issuer),
+  )
+  const destMin = (
+    input.min_received ?? Number(bestPath.destination_amount) * 0.995
+  ).toFixed(7)
 
   const txBuilder = new TransactionBuilder(account, {
     fee: BASE_FEE,
@@ -76,7 +104,7 @@ export async function buildSwap(input: SwapInput): Promise<string> {
       destination: input.wallet_address,
       destAsset,
       destMin,
-      path: [],
+      path: intermediatePath,
     }))
     .setTimeout(180)
 
