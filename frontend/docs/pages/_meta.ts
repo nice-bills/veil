@@ -3,7 +3,12 @@ export default {
   'getting-started': 'Getting Started',
   'local-dev': 'Local Dev Emulator',
   architecture: 'Architecture',
+  contracts: {
+    title: 'Contracts',
+    type: 'separator',
+  },
   'contract-api': 'Contract API',
+  'contract-upgrades': 'Contract Upgrades',
   'sdk-reference': 'SDK Reference',
   'sdk-errors': 'SDK Error Reference',
   troubleshooting: 'Troubleshooting',
